@@ -67,6 +67,25 @@
   .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); cursor: pointer; }
   .err { color: var(--bad); font-size: 14px; margin: 0; }
   .progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; } .progress i { display: block; height: 100%; width: 0; background: var(--accent); }
+  /* Test Card */
+  .tc h3 { font: 700 22px/1.1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; margin: 2px 0 6px; }
+  .tc .step { color: var(--muted); font: 500 12px var(--body); text-transform: uppercase; letter-spacing: 0.08em; }
+  .tc .do { font-size: 16px; font-weight: 500; margin: 6px 0; }
+  .tc .setup { color: var(--muted); font-size: 14px; margin: 0 0 6px; }
+  .tc .expect { display: inline-block; border-radius: 999px; padding: 2px 10px; font: 500 13px var(--body); border: 1px solid var(--line); }
+  .tc .expect.all { color: var(--good); border-color: var(--good); } .tc .expect.none { color: var(--bad); border-color: var(--bad); }
+  .tc input[type=text], .tc input[type=number], .tc textarea { font: 15px var(--body); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); width: 100%; max-width: 260px; }
+  .tc textarea { max-width: 100%; min-height: 54px; }
+  .tc .row { display: grid; gap: 6px; margin: 10px 0; }
+  .tc .big { font: 700 44px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .tc table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tc td, .tc th { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tc th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .tc .scroll { overflow-x: auto; }
+  .tc .pill { border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 600; }
+  .tc .pill.pass { background: var(--good); color: var(--accent-ink); } .tc .pill.fail { background: var(--bad); color: #fff; } .tc .pill.skip { background: var(--line); color: var(--ink); }
+  body.card .free-only { display: none; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -75,8 +94,12 @@
   <header>
     <h1>ODAT Push-up Test <small id="version"></small></h1>
     <div class="bar">
+      <div class="seg" role="group" aria-label="Mode">
+        <button id="modeFree" aria-pressed="true">Free test</button>
+        <button id="modeCard" aria-pressed="false">Test Card</button>
+      </div>
       <div class="seg" role="group" aria-label="Model" id="modelSeg"></div>
-      <div class="seg" role="group" aria-label="Source">
+      <div class="seg" role="group" aria-label="Source" id="sourceSeg">
         <button id="srcCam" aria-pressed="true">Camera</button>
         <button id="srcFile" aria-pressed="false">Video file</button>
       </div>
@@ -108,10 +131,15 @@
         <label class="switch"><input type="checkbox" id="speak" checked> Say the count</label>
         <label class="switch"><input type="checkbox" id="skeleton" checked> Skeleton</label>
       </div>
+      <div class="bar" style="margin-top:10px">
+        <span class="model-note" style="margin:0">Full push-up = elbows bend to at least</span>
+        <div class="seg" role="group" aria-label="Depth" id="depthSeg"></div>
+      </div>
       <p class="err" id="err" hidden></p>
     </section>
 
     <aside class="side">
+      <div class="panel tc" id="tcPanel" hidden></div>
       <div class="panel">
         <h2>Model</h2>
         <dl class="read">
@@ -133,12 +161,12 @@
           <div><dt>Frames analysed</dt><dd id="rFrames">0</dd></div>
         </dl>
       </div>
-      <div class="panel">
+      <div class="panel free-only">
         <h2>Every rep attempt</h2>
         <ol class="log" id="log"><li><span>–</span><span>Attempts appear here: counted, or why not.</span></li></ol>
         <div class="bar" style="margin-top:10px"><button class="btn" id="copyBtn">Copy results</button><span id="copied" class="model-note" hidden>Copied</span></div>
       </div>
-      <div class="panel">
+      <div class="panel free-only">
         <h2>Set-up for a fair test</h2>
         <ul class="tips">
           <li>Prop the phone side-on, about 2 m away, at floor level.</li>
@@ -152,8 +180,11 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
 <script src="models.js"></script>
 <script src="counter.js"></script>
 <script src="app.js"></script>
+<script src="scenarios.js"></script>
+<script src="testcard.js"></script>
 </body>
 </html>

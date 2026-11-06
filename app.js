@@ -13,7 +13,10 @@
   const work = document.createElement("canvas"), wctx = work.getContext("2d", { willReadFrequently: false });
 
   const S = { model: "full", source: "camera", facing: "user", running: false, pose: null, counter: null,
-              tick: 0, frames: 0, stream: null, msHist: [], fpsHist: [], lastProc: 0, startT: 0, wake: null, loadToken: 0 };
+              tick: 0, frames: 0, stream: null, msHist: [], fpsHist: [], lastProc: 0, startT: 0, wake: null, loadToken: 0,
+              depth: 100, devStream: null };
+  const DEPTHS = [90, 100, 110, "tuned"];          // bottom elbow angle a rep must reach (Alex: adjustable, start 100)
+  const hooks = [];                                // Test Card listens to every analysed frame
 
   // ---------- UI helpers ----------
   const fmt = (v, d = 0) => (typeof v === "number" && isFinite(v) ? v.toFixed(d) : "–");
@@ -46,13 +49,30 @@
     el.textContent = done.counted ? `Counted (${S.counter.count})` : `Not counted: ${done.reason}`;
     el.style.boxShadow = done.counted ? "inset 0 0 0 2px #3fbf93" : "inset 0 0 0 2px #ef7d5f";
   }
+  function depthLimit() { return S.depth === "tuned" ? MODELS[S.model].params.max_bottom : S.depth; }
+  function applyDepth() { if (S.counter) S.counter.P.max_bottom = depthLimit(); }
+  function buildDepthSeg() {
+    for (const d of DEPTHS) {
+      const b = document.createElement("button");
+      b.textContent = d === "tuned" ? "Tuned" : d + "°"; b.dataset.key = String(d);
+      b.title = d === "tuned" ? "The setting tuned on the pilot data (" + MODELS[S.model].params.max_bottom + "°)" : "A rep must bend the elbows to " + d + "° or less";
+      b.addEventListener("click", () => setDepth(d));
+      $("depthSeg").appendChild(b);
+    }
+  }
+  function setDepth(d) {
+    S.depth = d; applyDepth();
+    for (const b of $("depthSeg").children) b.setAttribute("aria-pressed", String(b.dataset.key === String(d)));
+    try { localStorage.setItem("odat_depth", String(d)); } catch (e) { /* optional */ }
+  }
   function addLog(done) {
     const log = $("log");
     if (log.dataset.empty !== "no") { log.innerHTML = ""; log.dataset.empty = "no"; }
     const li = document.createElement("li");
     const t = document.createElement("span"); t.textContent = fmt(done.t, 1) + " s";
     const r = document.createElement("span");
-    r.textContent = done.counted ? `rep ${S.counter.count}` : `not counted: ${done.reason}`;
+    const depth = isFinite(done.bottom) ? ` · ${Math.round(done.bottom)}°` : "";
+    r.textContent = (done.counted ? `rep ${S.counter.count}` : `not counted: ${done.reason}`) + depth;
     r.className = done.counted ? "ok-t" : "no-t";
     li.append(t, r);
     log.prepend(li);
@@ -76,6 +96,7 @@
     if (token !== S.loadToken) { pose.close(); return; }
     S.pose = pose; S.tick = 0;
     S.counter = new PushupCounter.Counter(m.params, FPS);
+    applyDepth();
   }
   async function switchModel(key) {
     if (key === S.model && S.pose) return;
@@ -100,6 +121,7 @@
     S.frames++;
     S.msHist = S.msHist.concat(ms).slice(-30);
     render(image, done);
+    for (const fn of hooks) fn({ t, world, image, size: [W, H], done, ms });
   }
 
   // ---------- drawing ----------
@@ -151,12 +173,12 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error("This browser can't open the camera here. Use https:// or localhost, in Chrome or Safari.");
     }
-    S.stream = await navigator.mediaDevices.getUserMedia({ audio: false,
+    S.stream = S.devStream || await navigator.mediaDevices.getUserMedia({ audio: false,
       video: { facingMode: S.facing, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } } });
     S.pose.reset();
     video.srcObject = S.stream; video.removeAttribute("src");
     await video.play();
-    $("stage").classList.toggle("mirror", S.facing === "user");
+    $("stage").classList.toggle("mirror", S.facing === "user" && !S.devStream);
     S.startT = performance.now(); S.lastProc = 0;
     cameraLoop();
   }
@@ -212,16 +234,17 @@
   async function stop() {
     S.running = false;
     $("startBtn").textContent = "Start"; $("startBtn").disabled = false;
-    if (S.stream) { S.stream.getTracks().forEach((t) => t.stop()); S.stream = null; }
+    if (S.stream && S.stream !== S.devStream) S.stream.getTracks().forEach((t) => t.stop());
+    S.stream = null;
     if (S.wake) { try { await S.wake.release(); } catch (e) { /* ignore */ } S.wake = null; }
   }
 
   // ---------- results for Alex ----------
   function copyResults() {
     const c = S.counter;
-    const out = { app: "ODAT push-up test", model: S.model, approach: MODELS[S.model].approach, source: S.source,
+    const out = { app: "ODAT push-up test", model: S.model, approach: MODELS[S.model].approach, depth: depthLimit(), source: S.source,
       device: navigator.userAgent, frames: S.frames, median_ms_per_frame: Math.round(S.msHist.slice().sort((a, b) => a - b)[S.msHist.length >> 1] || 0),
-      count: c ? c.count : 0, attempts: c ? c.log.map((d) => ({ t: d.t, counted: d.counted, reason: d.reason })) : [] };
+      count: c ? c.count : 0, attempts: c ? c.log.map((d) => ({ t: d.t, counted: d.counted, reason: d.reason, depth: Math.round(d.bottom) })) : [] };
     const text = JSON.stringify(out, null, 1);
     const done = () => { $("copied").hidden = false; setTimeout(() => ($("copied").hidden = true), 1500); };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => prompt("Copy:", text));
@@ -259,7 +282,16 @@
   });
 
   try { const m = localStorage.getItem("odat_model"); if (m && MODELS[m]) S.model = m; } catch (e) { /* optional */ }
-  buildModelSeg(); setModelUI();
+  try { const d = localStorage.getItem("odat_depth"); if (d) S.depth = d === "tuned" ? "tuned" : Number(d); } catch (e) { /* optional */ }
+  if (!DEPTHS.includes(S.depth)) S.depth = 100;
+  buildModelSeg(); setModelUI(); buildDepthSeg(); setDepth(S.depth);
+  // Small API for the Test Card (testcard.js)
+  window.ODAT = {
+    S, MODELS, hooks, FPS, say, showErr, resetCount, depthLimit,
+    startCamera: () => { showErr(""); S.source = "camera"; return begin(() => startCamera()); },
+    stop: () => stop(),
+    setDevStream: (stream) => { S.devStream = stream; },
+  };
   $("version").textContent = "test build · runs on this device";
   if (typeof Pose === "undefined") showErr("The pose model library didn't load. Check the internet connection and reload.");
 })();

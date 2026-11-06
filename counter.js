@@ -174,7 +174,7 @@
         if (e >= this.bottom + P.rise && e >= P.end_min) {
           const dur = t - this.t[this.start] + 1 / this.fps;
           let reason = null;
-          if (!(this.bottom <= P.max_bottom)) reason = "not deep enough";
+          if (!(this.bottom <= P.max_bottom)) reason = "too shallow";
           else if (!(dur >= P.min_dur - 1e-9)) reason = "too quick";
           else reason = this._rejectReason(this.start, i + 1);
           done = { t: Math.round(t * 1000) / 1000, counted: !reason, reason, top: this.top, bottom: this.bottom, dur };
