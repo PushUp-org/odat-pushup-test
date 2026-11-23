@@ -21,7 +21,7 @@
   const DEFAULTS = {
     drop: 30, rise: 30, max_bottom: 135, knee_min: 150, body_min: 130, trunk_max: 45, vis: 0.5,
     leg_vis: 0.1, h_drop: 0.15, smooth: 5, max_gap_s: 1.0, legs_hidden: "reject",
-    top_min: 0, end_min: 0, min_dur: 0, edge: -Infinity, knee2d_min: 0,
+    top_min: 0, end_min: 0, min_dur: 0, edge: -Infinity, knee2d_min: 0, hmax_bottom: Infinity,
   };
   const MP_FEET = { l: [29, 31], r: [30, 32] };   // MediaPipe heel, toe
 
@@ -68,6 +68,7 @@
     constructor(params, fps = 15) {
       this.P = Object.assign({}, DEFAULTS, params || {});
       if (this.P.edge === null || this.P.edge === undefined) this.P.edge = -Infinity;
+      if (this.P.hmax_bottom === null || this.P.hmax_bottom === undefined) this.P.hmax_bottom = Infinity;
       this.fps = fps;
       this.reset();
     }
@@ -174,10 +175,12 @@
         if (e >= this.bottom + P.rise && e >= P.end_min) {
           const dur = t - this.t[this.start] + 1 / this.fps;
           let reason = null;
+          const hMin = nanMin(this.f.height.slice(this.start, i + 1));
           if (!(this.bottom <= P.max_bottom)) reason = "too shallow";
+          else if (isFinite(P.hmax_bottom) && !(hMin <= P.hmax_bottom)) reason = "too shallow";
           else if (!(dur >= P.min_dur - 1e-9)) reason = "too quick";
           else reason = this._rejectReason(this.start, i + 1);
-          done = { t: Math.round(t * 1000) / 1000, counted: !reason, reason, top: this.top, bottom: this.bottom, dur };
+          done = { t: Math.round(t * 1000) / 1000, counted: !reason, reason, top: this.top, bottom: this.bottom, dur, shoulder: hMin };
           if (!reason) { this.count += 1; this.events.push(done.t); }
           this.log.push(done);
           this.state = "up"; this.top = e; this.start = i;

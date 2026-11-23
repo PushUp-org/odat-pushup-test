@@ -4,70 +4,200 @@ window.PUSHUP_MODELS = {
   "label": "Full",
   "complexity": 1,
   "note": "Recommended. Most accurate; same model as the pilot app.",
-  "approach": "strict_mp_full_v5",
   "poses": "mp_legacy_c1_320_notext",
-  "params": {
-   "drop": 15,
-   "rise": 15,
-   "max_bottom": 135,
-   "knee_min": 150,
-   "body_min": 140,
-   "trunk_max": 60,
-   "vis": 0.5,
-   "leg_vis": 0.03,
-   "h_drop": 0.15,
-   "smooth": 5,
-   "max_gap_s": 1.0,
-   "legs_hidden": "reject",
-   "top_min": 130,
-   "end_min": 110,
-   "min_dur": 0.5,
-   "edge": 0,
-   "knee2d_min": 0.0
-  },
   "size_mb": 9.4,
   "ms_per_frame_pc": 66.3,
-  "heldout": {
-   "clean_recall": 97.1,
-   "clean_extra_per_50": 1.6,
-   "body_full_recall": 85.8,
-   "fast_recall": 78.2,
-   "knees_counted_pct": 17.5
+  "standards": {
+   "lenient": {
+    "approach": "strict_mp_full_v6",
+    "params": {
+     "drop": 15,
+     "rise": 15,
+     "max_bottom": 135,
+     "knee_min": 150,
+     "body_min": 140,
+     "trunk_max": 60,
+     "vis": 0.5,
+     "leg_vis": 0.03,
+     "h_drop": 0.15,
+     "smooth": 5,
+     "max_gap_s": 1.0,
+     "legs_hidden": "reject",
+     "top_min": 130,
+     "end_min": 110,
+     "min_dur": 0.5,
+     "edge": 0,
+     "knee2d_min": 0.0,
+     "hmax_bottom": null
+    },
+    "heldout": {
+     "clean_recall": 97.2,
+     "clean_extra_per_50": 1.5,
+     "body_full_recall": 85.9,
+     "fast_recall": 78.9,
+     "knees_counted_pct": 17.5
+    }
+   },
+   "standard": {
+    "approach": "strict_mp_full_v6_standard",
+    "params": {
+     "drop": 15,
+     "rise": 15,
+     "max_bottom": 180,
+     "knee_min": 150,
+     "body_min": 140,
+     "trunk_max": 60,
+     "vis": 0.5,
+     "leg_vis": 0.03,
+     "h_drop": 0.15,
+     "smooth": 5,
+     "max_gap_s": 1.0,
+     "legs_hidden": "reject",
+     "top_min": 130,
+     "end_min": 110,
+     "min_dur": 0.5,
+     "edge": 0,
+     "knee2d_min": 0.0,
+     "hmax_bottom": 0.5
+    },
+    "heldout": {
+     "clean_recall": 88.6,
+     "clean_extra_per_50": 1.2,
+     "body_full_recall": 75.4,
+     "fast_recall": 65.7,
+     "knees_counted_pct": 8.8
+    }
+   },
+   "strict": {
+    "approach": "strict_mp_full_v6_strict",
+    "params": {
+     "drop": 15,
+     "rise": 15,
+     "max_bottom": 180,
+     "knee_min": 150,
+     "body_min": 140,
+     "trunk_max": 60,
+     "vis": 0.5,
+     "leg_vis": 0.2,
+     "h_drop": 0.0,
+     "smooth": 3,
+     "max_gap_s": 1.0,
+     "legs_hidden": "reject",
+     "top_min": 120,
+     "end_min": 140,
+     "min_dur": 0.6,
+     "edge": 0,
+     "knee2d_min": 0.0,
+     "hmax_bottom": 0.45
+    },
+    "heldout": {
+     "clean_recall": 77.7,
+     "clean_extra_per_50": 1.2,
+     "body_full_recall": 63.8,
+     "fast_recall": 48.5,
+     "knees_counted_pct": 6.2
+    }
+   }
   }
  },
  "lite": {
   "label": "Lite",
   "complexity": 0,
   "note": "For older phones: about 40 % less work per frame, slightly less accurate.",
-  "approach": "strict_mp_lite_web_v5",
   "poses": "mp_legacy_c0_320_notext_web",
-  "params": {
-   "drop": 20,
-   "rise": 20,
-   "max_bottom": 150,
-   "knee_min": 150,
-   "body_min": 120,
-   "trunk_max": 60,
-   "vis": 0.5,
-   "leg_vis": 0.01,
-   "h_drop": 0.0,
-   "smooth": 5,
-   "max_gap_s": 1.0,
-   "legs_hidden": "reject",
-   "top_min": 110,
-   "end_min": 120,
-   "min_dur": 0.0,
-   "edge": 0,
-   "knee2d_min": 0.0
-  },
   "size_mb": 5.8,
   "ms_per_frame_pc": 38.0,
-  "heldout": {
-   "clean_recall": 90.4,
-   "clean_extra_per_50": 2.9,
-   "body_full_recall": 79.4,
-   "fast_recall": 71.8,
-   "knees_counted_pct": 20.0
+  "standards": {
+   "lenient": {
+    "approach": "strict_mp_lite_web_v6",
+    "params": {
+     "drop": 15,
+     "rise": 10,
+     "max_bottom": 150,
+     "knee_min": 150,
+     "body_min": 140,
+     "trunk_max": 60,
+     "vis": 0.5,
+     "leg_vis": 0.01,
+     "h_drop": 0.0,
+     "smooth": 5,
+     "max_gap_s": 1.0,
+     "legs_hidden": "reject",
+     "top_min": 130,
+     "end_min": 110,
+     "min_dur": 0.6,
+     "edge": 0,
+     "knee2d_min": 0.0,
+     "hmax_bottom": 0.6
+    },
+    "heldout": {
+     "clean_recall": 89.4,
+     "clean_extra_per_50": 1.4,
+     "body_full_recall": 78.5,
+     "fast_recall": 70.3,
+     "knees_counted_pct": 16.9
+    }
+   },
+   "standard": {
+    "approach": "strict_mp_lite_web_v6_standard",
+    "params": {
+     "drop": 15,
+     "rise": 10,
+     "max_bottom": 180,
+     "knee_min": 150,
+     "body_min": 140,
+     "trunk_max": 60,
+     "vis": 0.5,
+     "leg_vis": 0.01,
+     "h_drop": 0.0,
+     "smooth": 5,
+     "max_gap_s": 1.0,
+     "legs_hidden": "reject",
+     "top_min": 130,
+     "end_min": 110,
+     "min_dur": 0.6,
+     "edge": 0,
+     "knee2d_min": 0.0,
+     "hmax_bottom": 0.5
+    },
+    "heldout": {
+     "clean_recall": 77.2,
+     "clean_extra_per_50": 1.5,
+     "body_full_recall": 71.0,
+     "fast_recall": 55.9,
+     "knees_counted_pct": 13.8
+    }
+   },
+   "strict": {
+    "approach": "strict_mp_lite_web_v6_strict",
+    "params": {
+     "drop": 15,
+     "rise": 10,
+     "max_bottom": 180,
+     "knee_min": 140,
+     "body_min": 140,
+     "trunk_max": 60,
+     "vis": 0.5,
+     "leg_vis": 0.05,
+     "h_drop": 0.3,
+     "smooth": 1,
+     "max_gap_s": 1.0,
+     "legs_hidden": "reject",
+     "top_min": 140,
+     "end_min": 140,
+     "min_dur": 0.6,
+     "edge": 0,
+     "knee2d_min": 0.0,
+     "hmax_bottom": 0.45
+    },
+    "heldout": {
+     "clean_recall": 61.4,
+     "clean_extra_per_50": 1.8,
+     "body_full_recall": 59.7,
+     "fast_recall": 38.2,
+     "knees_counted_pct": 15.0
+    }
+   }
   }
  }
 };

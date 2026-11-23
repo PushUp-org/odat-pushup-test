@@ -86,7 +86,7 @@
       <div class="row"><label for="tcTester">Your tester ID (letters, numbers, dashes)</label>
         <input type="text" id="tcTester" placeholder="e.g. alex-01" autocomplete="off" maxlength="24"></div>
       <div class="row"><label class="switch" style="align-items:flex-start"><input type="checkbox" id="tcConsent" style="margin-top:4px"> <span>${esc(CONSENT)}</span></label></div>
-      <p class="setup">Model: <b>${esc(m.label)}</b> · full push-up = elbows to ${esc(O.depthLimit())}° (change at the top before starting).
+      <p class="setup">Model: <b>${esc(m.label)}</b> · push-up standard: <b>${esc(O.depthLimit())}</b> (change at the top before starting).
         ${idbOk ? "" : "<br><b>This browser blocks storage: don't reload during the session.</b>"}</p>
       ${DEV ? `<div class="row"><label for="tcDevVideo">Dev: use a video file as the camera</label><input type="file" id="tcDevVideo" accept="video/*"></div>` : ""}
       <div class="bar"><button class="btn primary" id="tcStart">Start Test Card</button></div>
@@ -209,7 +209,7 @@
     const f = rec.frames;
     f.t.push(rnd(t, 3)); f.world.push(pack(h.world)); f.image.push(pack(h.image)); f.size = h.size;
     if (h.done) rec.attempts.push({ t: rnd(h.done.t - rec.offset, 3), counted: h.done.counted, reason: h.done.reason,
-      depth: rnd(h.done.bottom, 1), top: rnd(h.done.top, 1), dur: rnd(h.done.dur, 2) });
+      depth: rnd(h.done.bottom, 1), top: rnd(h.done.top, 1), dur: rnd(h.done.dur, 2), shoulder: rnd(h.done.shoulder, 2) });
     const c = $("tcCount"); if (c) c.textContent = String(O.S.counter.count);
   }
   O.hooks.push(onFrame);
@@ -239,7 +239,8 @@
       await put("blobs", `${session.session_id}/${sr.id}`, { video: r.video, frames: r.frames });
       Object.assign(sr, {
         status: "done", started_at: r.started_at, duration_s: rnd(r.duration, 2),
-        model: O.S.model, approach: O.MODELS[O.S.model].approach, depth_limit: O.depthLimit(),
+        model: O.S.model, approach: (O.MODELS[O.S.model].standards[O.depthLimit()] || {}).approach, depth_limit: O.depthLimit(),
+        params: JSON.parse(JSON.stringify(O.S.counter.P)),   // exact counter settings (Infinity -> null)
         video: { file: `video/${sr.id}.${ext}`, mime: r.video.type, bytes: r.video.size, sha256: await sha256(r.video) },
         frames: { file: `frames/${sr.id}.json`, n: r.frames.t.length, person: person, size: r.frames.size },
         counted, attempts: r.attempts, self_report: n, should_count: shouldCount(s, n), pass: ok,

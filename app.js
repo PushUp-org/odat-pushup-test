@@ -15,7 +15,15 @@
   const S = { model: "full", source: "camera", facing: "user", running: false, pose: null, counter: null,
               tick: 0, frames: 0, stream: null, msHist: [], fpsHist: [], lastProc: 0, startT: 0, wake: null, loadToken: 0,
               depth: 100, devStream: null };
-  const DEPTHS = [90, 100, 110, "tuned"];          // bottom elbow angle a rep must reach (Alex: adjustable, start 100)
+  // Push-up standard (evaluation/14). Depth is judged by how far the shoulders come down towards the hands
+  // (arm lengths), which barely changes with the camera view; the elbow angle did (Test Card, 14).
+  // Each standard has its own tuned settings per model (models.js: MODELS[model].standards[standard]).
+  const DEPTHS = {
+    lenient:  { label: "Lenient",  hint: "As tuned on the pilot labels: half reps may count." },
+    standard: { label: "Standard", hint: "Shoulders must come down to half an arm length above the hands." },
+    strict:   { label: "Strict",   hint: "Deeper (0.45 arm lengths), and arms must straighten to 140° at the top." },
+  };
+  const std = () => MODELS[S.model].standards[S.depth] || MODELS[S.model].standards.lenient;
   const hooks = [];                                // Test Card listens to every analysed frame
 
   // ---------- UI helpers ----------
@@ -26,9 +34,11 @@
     $("chipModel").textContent = m.label;
     $("mName").textContent = m.label;
     $("mSize").textContent = m.size_mb ? m.size_mb + " MB" : "–";
-    $("mClean").textContent = m.heldout ? m.heldout.clean_recall + " %" : "–";
-    $("mExtra").textContent = m.heldout ? String(m.heldout.clean_extra_per_50) : "–";
-    $("mNote").textContent = m.note;
+    const h = std().heldout;
+    $("mClean").textContent = h ? h.clean_recall + " %" : "–";
+    $("mExtra").textContent = h ? String(h.clean_extra_per_50) : "–";
+    $("mNote").textContent = m.note + (S.depth === "lenient" ? "" :
+      " Scores are against the pilot labels, which counted some shallow reps, so this standard looks lower than it is.");
     for (const b of $("modelSeg").children) b.setAttribute("aria-pressed", String(b.dataset.key === S.model));
   }
   function buildModelSeg() {
@@ -49,21 +59,23 @@
     el.textContent = done.counted ? `Counted (${S.counter.count})` : `Not counted: ${done.reason}`;
     el.style.boxShadow = done.counted ? "inset 0 0 0 2px #3fbf93" : "inset 0 0 0 2px #ef7d5f";
   }
-  function depthLimit() { return S.depth === "tuned" ? MODELS[S.model].params.max_bottom : S.depth; }
-  function applyDepth() { if (S.counter) S.counter.P.max_bottom = depthLimit(); }
+  function depthLimit() { return S.depth; }                        // the standard's name, recorded with results
+  function counterParams() { return Object.assign({}, std().params); }
+  function applyDepth() { if (S.counter) S.counter.P = new PushupCounter.Counter(counterParams(), FPS).P; }
   function buildDepthSeg() {
-    for (const d of DEPTHS) {
+    for (const [key, d] of Object.entries(DEPTHS)) {
       const b = document.createElement("button");
-      b.textContent = d === "tuned" ? "Tuned" : d + "°"; b.dataset.key = String(d);
-      b.title = d === "tuned" ? "The setting tuned on the pilot data (" + MODELS[S.model].params.max_bottom + "°)" : "A rep must bend the elbows to " + d + "° or less";
-      b.addEventListener("click", () => setDepth(d));
+      b.textContent = d.label; b.dataset.key = key; b.title = d.hint;
+      b.addEventListener("click", () => setDepth(key));
       $("depthSeg").appendChild(b);
     }
   }
   function setDepth(d) {
     S.depth = d; applyDepth();
-    for (const b of $("depthSeg").children) b.setAttribute("aria-pressed", String(b.dataset.key === String(d)));
-    try { localStorage.setItem("odat_depth", String(d)); } catch (e) { /* optional */ }
+    for (const b of $("depthSeg").children) b.setAttribute("aria-pressed", String(b.dataset.key === d));
+    $("depthHint").textContent = DEPTHS[d].hint;
+    setModelUI();
+    try { localStorage.setItem("odat_standard", d); } catch (e) { /* optional */ }
   }
   function addLog(done) {
     const log = $("log");
@@ -95,8 +107,7 @@
     await pose.initialize();
     if (token !== S.loadToken) { pose.close(); return; }
     S.pose = pose; S.tick = 0;
-    S.counter = new PushupCounter.Counter(m.params, FPS);
-    applyDepth();
+    S.counter = new PushupCounter.Counter(counterParams(), FPS);
   }
   async function switchModel(key) {
     if (key === S.model && S.pose) return;
@@ -242,7 +253,7 @@
   // ---------- results for Alex ----------
   function copyResults() {
     const c = S.counter;
-    const out = { app: "ODAT push-up test", model: S.model, approach: MODELS[S.model].approach, depth: depthLimit(), source: S.source,
+    const out = { app: "ODAT push-up test", model: S.model, approach: std().approach, standard: depthLimit(), source: S.source,
       device: navigator.userAgent, frames: S.frames, median_ms_per_frame: Math.round(S.msHist.slice().sort((a, b) => a - b)[S.msHist.length >> 1] || 0),
       count: c ? c.count : 0, attempts: c ? c.log.map((d) => ({ t: d.t, counted: d.counted, reason: d.reason, depth: Math.round(d.bottom) })) : [] };
     const text = JSON.stringify(out, null, 1);
@@ -282,12 +293,12 @@
   });
 
   try { const m = localStorage.getItem("odat_model"); if (m && MODELS[m]) S.model = m; } catch (e) { /* optional */ }
-  try { const d = localStorage.getItem("odat_depth"); if (d) S.depth = d === "tuned" ? "tuned" : Number(d); } catch (e) { /* optional */ }
-  if (!DEPTHS.includes(S.depth)) S.depth = 100;
+  S.depth = "standard";
+  try { const d = localStorage.getItem("odat_standard"); if (d && DEPTHS[d]) S.depth = d; } catch (e) { /* optional */ }
   buildModelSeg(); setModelUI(); buildDepthSeg(); setDepth(S.depth);
   // Small API for the Test Card (testcard.js)
   window.ODAT = {
-    S, MODELS, hooks, FPS, say, showErr, resetCount, depthLimit,
+    S, MODELS, hooks, FPS, say, showErr, resetCount, depthLimit, counterParams,
     startCamera: () => { showErr(""); S.source = "camera"; return begin(() => startCamera()); },
     stop: () => stop(),
     setDevStream: (stream) => { S.devStream = stream; },
